@@ -34,7 +34,7 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git config --global --add safe.directory '*'
 
-      - name: Clone kernel repository (staging branch)
+      - name: Clone kernel repository (branch staging)
         run: |
           git clone --depth 1 --branch "staging" \
             "https://github.com/Reinazhard/guacamole_sickness.git" \
@@ -44,17 +44,18 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: curl -fsSLO https://raw.githubusercontent.com/Reinazhard/scripts/refs/heads/main/raviole/build.sh
 
-      - name: Build (KSU Next)
+      - name: Setup KernelSU Next
+        working-directory: ${{ github.workspace }}
+        run: |
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+
+      - name: Build Kernel
         working-directory: ${{ github.workspace }}
         env:
-          BRANCH: "staging"
-          KERNEL_BRANCH: "staging"
-          KSU_REPO: "KernelSU-Next/KernelSU-Next"
-          KSU_BRANCH: "next"
           LOCALVERSION: "-ybrt-繁星"
           KBUILD_BUILD_USER: "繁星"
           KBUILD_BUILD_HOST: "BuildServer"
-        run: KSU=1 bash build.sh
+        run: bash build.sh
 
       - name: Collect artifacts
         working-directory: ${{ github.workspace }}
