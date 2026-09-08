@@ -1,0 +1,77 @@
+name: Build KernelSU Next
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 86hm
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: debian:bookworm
+
+    env:
+      CI: "1"
+      RELEASE: "1"
+      NOTIFY: "0"
+      TELEGRAM_TOKEN: ""
+      TELEGRAM_CHAT_ID: ""
+      CHATID: ""
+
+    steps:
+      - name: Set branch variables (86hm)
+        if: github.ref == 'refs/heads/86hm'
+        run: |
+          echo "RELEASE=1" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git make curl unzip zip xz-utils zstd default-jre \
+            build-essential flex bison bc python3 rsync cpio ca-certificates \
+            libssl-dev libelf-dev zlib1g-dev perl pahole dwarves lz4
+          rm -rf /var/lib/apt/lists/*
+
+      - name: Configure git
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git config --global --add safe.directory '*'
+
+      - name: Clone repository
+        run: |
+          REF="86hm"
+          git clone --depth 1 --branch "${REF}" \
+            "https://github.com/Reinazhard/guacamole_sickness.git" \
+            "$GITHUB_WORKSPACE"
+
+      - name: Download build script
+        working-directory: ${{ github.workspace }}
+        run: curl -fsSLO https://raw.githubusercontent.com/Reinazhard/scripts/refs/heads/main/raviole/build.sh
+
+      - name: Build (KSU Next)
+        working-directory: ${{ github.workspace }}
+        env:
+          KSU_REPO: "KernelSU-Next/KernelSU-Next"
+          KSU_BRANCH: "next"
+          LOCALVERSION: "-ybrt-繁星"
+          KBUILD_BUILD_USER: "繁星"
+          KBUILD_BUILD_HOST: "BuildServer"
+        run: KSU=1 bash build.sh
+
+      - name: Collect artifacts
+        working-directory: ${{ github.workspace }}
+        run: |
+          find . -name "*.zip" -not -path "./.git/*" | head -20
+          mkdir -p /tmp/artifacts
+          find . -name "*.zip" -not -path "./.git/*" -exec cp {} /tmp/artifacts/ \;
+          ls -la /tmp/artifacts/
+
+      - name: Upload kernel zips
+        uses: actions/upload-artifact@v4
+        with:
+          name: gs101-86hm-KernelSU-Next
+          path: /tmp/artifacts/*.zip
+          if-no-files-found: error
+          compression-level: 0
