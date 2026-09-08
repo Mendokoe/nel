@@ -1,10 +1,11 @@
-name: Build KernelSU Next
+name: Build
 
 on:
-  workflow_dispatch:
   push:
     branches:
-      - main
+      - staging
+      - 86hm
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,13 +14,18 @@ jobs:
 
     env:
       CI: "1"
-      RELEASE: "1"
-      NOTIFY: "0"
-      TELEGRAM_TOKEN: ""
-      TELEGRAM_CHAT_ID: ""
-      CHATID: ""
 
     steps:
+      - name: Set branch variables (staging)
+        if: github.ref == 'refs/heads/staging'
+        run: |
+          echo "RELEASE=0" >> "$GITHUB_ENV"
+
+      - name: Set branch variables (86hm)
+        if: github.ref == 'refs/heads/86hm'
+        run: |
+          echo "RELEASE=1" >> "$GITHUB_ENV"
+
       - name: Install dependencies
         run: |
           apt-get update
@@ -34,41 +40,45 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git config --global --add safe.directory '*'
 
-      - name: Clone kernel repository (branch staging)
+      - name: Clone repository
         run: |
-          git clone --depth 1 --branch "staging" \
-            "https://github.com/Reinazhard/guacamole_sickness.git" \
+          REF="${GITHUB_REF_NAME}"
+          git clone --depth 1 --branch "${REF}" \
+            "https://github.com/${GITHUB_REPOSITORY}.git" \
             "$GITHUB_WORKSPACE"
 
-      - name: Download build script
-        working-directory: ${{ github.workspace }}
-        run: curl -fsSLO https://raw.githubusercontent.com/Reinazhard/scripts/refs/heads/main/raviole/build.sh
-
-      - name: Setup KernelSU Next
+      - name: Download build script & Patch Custom Name
         working-directory: ${{ github.workspace }}
         run: |
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
+          curl -fsSLO https://raw.githubusercontent.com/Reinazhard/scripts/refs/heads/main/raviole/build.sh
+          # Sisipkan -繁星 ke output LOCALVERSION tanpa merusak bawaan script
+          sed -i 's/echo "${lv}"/echo "${lv}-繁星"/' build.sh
 
-      - name: Build Kernel
+      - name: Build Standard (KSU=0)
         working-directory: ${{ github.workspace }}
-        env:
-          LOCALVERSION: "-ybrt-繁星"
-          KBUILD_BUILD_USER: "繁星"
-          KBUILD_BUILD_HOST: "BuildServer"
-        run: bash build.sh
+        run: |
+          KBUILD_BUILD_USER="繁星" \
+          KBUILD_BUILD_HOST="Cethem" \
+          KSU=0 bash build.sh
+
+      - name: Build KernelSU (KSU=1)
+        working-directory: ${{ github.workspace }}
+        run: |
+          KBUILD_BUILD_USER="繁星" \
+          KBUILD_BUILD_HOST="Cethem-K" \
+          KSU=1 bash build.sh
 
       - name: Collect artifacts
         working-directory: ${{ github.workspace }}
         run: |
-          find . -name "*.zip" -not -path "./.git/*" | head -20
           mkdir -p /tmp/artifacts
           find . -name "*.zip" -not -path "./.git/*" -exec cp {} /tmp/artifacts/ \;
           ls -la /tmp/artifacts/
 
-      - name: Upload kernel zips
+      - name: Upload kernel zips to GitHub Actions
         uses: actions/upload-artifact@v4
         with:
-          name: gs101-staging-KernelSU-Next
+          name: kernel-builds-${{ github.ref_name }}
           path: /tmp/artifacts/*.zip
           if-no-files-found: error
           compression-level: 0
