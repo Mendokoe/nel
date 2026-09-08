@@ -42,28 +42,28 @@ jobs:
 
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.ref_name }}
 
       - name: Download build script & Patch Custom Name
         run: |
           curl -fsSLO https://raw.githubusercontent.com/Reinazhard/scripts/refs/heads/main/raviole/build.sh
-          # Patch nama tanpa merusak struktur script
           sed -i 's/echo "${lv}"/echo "${lv}-繁星"/' build.sh
 
       - name: Build Standard (KSU=0)
+        working-directory: ${{ github.workspace }}
         run: |
           KBUILD_BUILD_USER="繁星" \
           KBUILD_BUILD_HOST="Cethem" \
           KSU=0 bash build.sh
 
       - name: Build KernelSU (KSU=1)
+        working-directory: ${{ github.workspace }}
         run: |
           KBUILD_BUILD_USER="繁星" \
           KBUILD_BUILD_HOST="Cethem-K" \
           KSU=1 bash build.sh
 
       - name: Collect artifacts
+        working-directory: ${{ github.workspace }}
         run: |
           mkdir -p /tmp/artifacts
           find . -name "*.zip" -not -path "./.git/*" -exec cp {} /tmp/artifacts/ \;
