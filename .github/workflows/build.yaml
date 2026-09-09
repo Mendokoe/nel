@@ -40,8 +40,12 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git config --global --add safe.directory '*'
 
-      - name: Checkout Repository
+      - name: Checkout Guacamole Sickness Kernel Source (staging)
         uses: actions/checkout@v4
+        with:
+          repository: 'Reinazhard/guacamole_sickness'
+          ref: 'staging'
+          path: '.'
 
       - name: Download build script & Patch Custom Name
         run: |
@@ -49,21 +53,18 @@ jobs:
           sed -i 's/echo "${lv}"/echo "${lv}-繁星"/' build.sh
 
       - name: Build Standard (KSU=0)
-        working-directory: ${{ github.workspace }}
         run: |
           KBUILD_BUILD_USER="繁星" \
           KBUILD_BUILD_HOST="Cethem" \
           KSU=0 bash build.sh
 
       - name: Build KernelSU (KSU=1)
-        working-directory: ${{ github.workspace }}
         run: |
           KBUILD_BUILD_USER="繁星" \
           KBUILD_BUILD_HOST="Cethem-K" \
           KSU=1 bash build.sh
 
       - name: Collect artifacts
-        working-directory: ${{ github.workspace }}
         run: |
           mkdir -p /tmp/artifacts
           find . -name "*.zip" -not -path "./.git/*" -exec cp {} /tmp/artifacts/ \;
