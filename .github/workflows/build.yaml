@@ -51,23 +51,26 @@ jobs:
         run: |
           curl -fsSLO https://raw.githubusercontent.com/Reinazhard/scripts/refs/heads/main/raviole/build.sh
           sed -i 's/echo "${lv}"/echo "${lv}-繁星"/' build.sh
+          mkdir -p /tmp/artifacts
 
       - name: Build Standard (KSU=0)
         run: |
           KBUILD_BUILD_USER="繁星" \
           KBUILD_BUILD_HOST="Cethem" \
           KSU=0 bash build.sh
+          # Amankan zip Standard ke /tmp/artifacts sebelum kena rm -f oleh build KSU
+          find . -name "*.zip" -not -path "./.git/*" -exec cp {} /tmp/artifacts/ \;
 
       - name: Build KernelSU (KSU=1)
         run: |
           KBUILD_BUILD_USER="繁星" \
           KBUILD_BUILD_HOST="Cethem-K" \
           KSU=1 bash build.sh
+          # Amankan zip KSU ke /tmp/artifacts
+          find . -name "*.zip" -not -path "./.git/*" -exec cp {} /tmp/artifacts/ \;
 
       - name: Collect artifacts
         run: |
-          mkdir -p /tmp/artifacts
-          find . -name "*.zip" -not -path "./.git/*" -exec cp {} /tmp/artifacts/ \;
           ls -la /tmp/artifacts/
 
       - name: Upload kernel zips to GitHub Actions
